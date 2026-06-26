@@ -1,0 +1,26 @@
+{
+  "q1": {
+    "title": "Metal vs. Wooden Spoon",
+    "question": "Why does a metal spoon feel hotter than a wooden spoon when placed in hot soup?",
+    "rubric": [
+      "Identify that metal is a better conductor of heat than wood.",
+      "State that heat is transferred faster from the soup to the hand through the metal spoon."
+    ]
+  },
+  "q2": {
+    "title": "Evaporation Dynamics",
+    "question": "Explain why clothes dry faster on a windy day compared to a still day.",
+    "rubric": [
+      "State that wind carries away water vapor molecules above the clothes.",
+      "Conclude that this increases the rate of evaporation of water from the clothes."
+    ]
+  },
+  "q3": {
+    "title": "Plant Transport Systems",
+    "question": "What will happen to a plant if its xylem vessels are completely blocked?",
+    "rubric": [
+      "State that water and mineral salts cannot be transported from the roots to the leaves.",
+      "Conclude that the plant cannot carry out photosynthesis and will eventually wither and die."
+    ]
+  }
+}
