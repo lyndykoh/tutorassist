@@ -1,28 +1,13 @@
-// import { NextResponse } from 'next/server';
-// import { createRequire } from 'module';
-// import { promises as fs } from 'fs';
-// import path from 'path';
-
-// const require = createRequire(import.meta.url);
-// const pdfParse = require('pdf-parse');
-
-// export async function POST(request: Request) {
-//   try {
-//     const formData = await request.formData();
-//     const file = formData.get('file') as File | null;
-//     const typedAnswer = formData.get('typedAnswer') as string | null;
-//     const questionId = formData.get('questionId') as string | null;
 import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
-import pdfParse from 'pdf-parse'; // Use the standard, clean import
 
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File | null;
     const typedAnswer = formData.get('typedAnswer') as string | null;
     const questionId = formData.get('questionId') as string | null;
+    
     if (!questionId) {
       return NextResponse.json({ success: false, error: 'Missing selected question ID.' }, { status: 400 });
     }
@@ -37,30 +22,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Target question configuration not found.' }, { status: 404 });
     }
 
-    let studentText = '';
-
-    // 2. Process Input Source (PDF or Direct Typing)
-    if (file && file.type === 'application/pdf') {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const pdfData = await pdfParse(buffer); 
-      studentText = pdfData.text;
-    } else if (typedAnswer) {
-      studentText = typedAnswer;
-    } else {
-      return NextResponse.json({ error: 'No PDF or text answer provided.' }, { status: 400 });
+    // 2. Validate Text Input
+    if (!typedAnswer || typedAnswer.trim() === '') {
+      return NextResponse.json({ success: false, error: 'No text answer provided.' }, { status: 400 });
     }
 
-    // 3. Dynamic Prompt Generation using the retrieved data
+    // 3. Dynamic Prompt Generation
     const runtimePrompt = `
       Question Context: ${selectedTarget.question}
       Expected Rubric Targets:
       ${selectedTarget.rubric.map((item: string, idx: number) => `${idx + 1}. ${item}`).join('\n')}
 
-      Student Answer Content: "${studentText}"
+      Student Answer Content: "${typedAnswer}"
     `;
 
-    // 4. Execution Call to Local Ollama Custom Instance
+    // 4. Execution Call to Local Ollama
     const ollamaResponse = await fetch('http://localhost:11434/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -90,7 +66,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      extractedText: studentText, 
+      extractedText: typedAnswer, 
       analysis: parsedAnalysis,
       questionMeta: selectedTarget.question
     });

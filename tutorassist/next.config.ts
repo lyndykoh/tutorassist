@@ -1,7 +1,19 @@
+// import type { NextConfig } from "next";
+
+// const nextConfig: NextConfig = {
+//   serverExternalPackages: ["pdf-parse"],
+// };
+
+// export default nextConfig;
+
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["pdf-parse"],
+  experimental: {
+    turbopack: {
+      root: "./",
+    },
+  },
 };
 
 export default nextConfig;

@@ -1,21 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+// 1. Import the JSON file directly using a relative path
+import questionsData from '../../data/questions.json';
 
-// Added the "text" property so the student can actually read the question
-const QUESTION_OPTIONS = [
-  { id: 'q1', title: 'Metal vs. Wooden Spoon', text: 'Why does a metal spoon feel hotter than a wooden spoon when placed in hot soup?' },
-  { id: 'q2', title: 'Evaporation Dynamics', text: 'Explain why clothes dry faster on a windy day compared to a still day.' },
-  { id: 'q3', title: 'Plant Transport Systems', text: 'What will happen to a plant if its xylem vessels are completely blocked?' }
-];
+// 2. Transform the JSON object into the array format your UI expects
+const QUESTION_OPTIONS = Object.entries(questionsData).map(([id, details]: [string, any]) => ({
+  id: id,
+  title: details.title,
+  text: details.question
+}));
 
 export default function StudentPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  
-  // State is now mapped by question ID so data isn't lost when navigating
   const [typedAnswers, setTypedAnswers] = useState<Record<string, string>>({});
-  const [files, setFiles] = useState<Record<string, File | null>>({});
   const [results, setResults] = useState<Record<string, any>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   const currentQuestion = QUESTION_OPTIONS[currentIndex];
@@ -34,24 +34,30 @@ export default function StudentPage() {
     setLoading(true);
 
     const typedAnswer = typedAnswers[currentQuestion.id] || '';
-    const file = files[currentQuestion.id] || null;
 
     const formData = new FormData();
     formData.append('questionId', currentQuestion.id);
-    if (file) formData.append('file', file);
     if (typedAnswer) formData.append('typedAnswer', typedAnswer);
 
     try {
+      setErrors(prev => ({ ...prev, [currentQuestion.id]: '' })); 
+
       const res = await fetch('/api/analyze', {
         method: 'POST',
         body: formData,
       });
+      
       const data = await res.json();
       
-      // Save the AI feedback specifically to this question's ID
+      if (!data.success) {
+        setErrors(prev => ({ ...prev, [currentQuestion.id]: data.error || 'The AI pipeline failed.' }));
+        return;
+      }
+      
       setResults(prev => ({ ...prev, [currentQuestion.id]: data }));
     } catch (error) {
       console.error('Error submitting work:', error);
+      setErrors(prev => ({ ...prev, [currentQuestion.id]: 'Network crash: Ensure the Next.js server is running.' }));
     } finally {
       setLoading(false);
     }
@@ -93,28 +99,11 @@ export default function StudentPage() {
         
         {/* Form Container */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* PDF Upload Section */}
-          <div className="border-2 border-dashed border-gray-300 p-6 rounded-lg text-center bg-gray-50 relative">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Upload Worksheet (PDF)</label>
-            <input 
-              type="file" 
-              accept="application/pdf"
-              key={currentQuestion.id} // Forces input reset when changing questions
-              onChange={(e) => setFiles(prev => ({ ...prev, [currentQuestion.id]: e.target.files?.[0] || null }))}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-            {files[currentQuestion.id] && (
-              <p className="mt-2 text-xs text-green-600 font-semibold">Attached: {files[currentQuestion.id]?.name}</p>
-            )}
-          </div>
-
-          <div className="text-center text-gray-400 font-bold text-xs tracking-wider">OR SUBMIT DIRECT TYPING</div>
-
           {/* Typed Text Section */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Your Answer Input</label>
             <textarea 
-              rows={4}
+              rows={6}
               value={typedAnswers[currentQuestion.id] || ''}
               onChange={(e) => setTypedAnswers(prev => ({ ...prev, [currentQuestion.id]: e.target.value }))}
               placeholder="Type your explanation statements here..."
@@ -124,14 +113,22 @@ export default function StudentPage() {
 
           <button 
             type="submit" 
-            disabled={loading || (!files[currentQuestion.id] && !typedAnswers[currentQuestion.id])}
+            disabled={loading || !typedAnswers[currentQuestion.id]?.trim()}
             className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors shadow-md"
           >
             {loading ? 'AI Engine Evaluating...' : 'Submit Answer & Get Feedback'}
           </button>
         </form>
 
-        {/* Results Section (Only displays if AI has returned a result for the current question) */}
+        {/* Error Banner */}
+        {errors[currentQuestion.id] && (
+          <div className="mt-8 p-4 bg-red-50 border-l-4 border-red-500 rounded shadow-sm">
+            <h3 className="text-red-800 font-bold">System Error</h3>
+            <p className="text-red-700 text-sm mt-1">{errors[currentQuestion.id]}</p>
+          </div>
+        )}
+
+        {/* Results Section */}
         {currentResult && currentResult.success && (
           <div className="mt-8 p-6 bg-green-50 rounded-lg border border-green-200 shadow-inner">
             <h2 className="text-xl font-bold text-green-900 mb-4">AI Diagnostic Feedback</h2>
